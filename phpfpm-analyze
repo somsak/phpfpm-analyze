@@ -1,13 +1,16 @@
 #!/usr/bin/python
 
-import os, sys, re, csv
+import os, sys, re, csv, locale
 from datetime import datetime
 from argparse import ArgumentParser
+
+#import locale
+#locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 arg_parser = ArgumentParser(description = "Analyze PHP-FPM log file")
 
 arg_parser.add_argument("-d", dest="debug", action = "store_true", default = False, help = "Enable debugging")
-arg_parser.add_argument("-s", dest="start_date", default = None, help = "Start date to look for in the log")
+arg_parser.add_argument("-s", dest="start_date", default = None, help = "Start date to look for in the log (2015/07/20 11:40:19)")
 arg_parser.add_argument("-e", dest="end_date", default = None, help = "End date to look for in the log")
 arg_parser.add_argument("-o", dest="output", default = None, help = "output file name")
 arg_parser.add_argument("-m", dest="min_count", default = 0, type=int, help = "minimum number of slow occurance to count for (0 means disabled)")
@@ -42,6 +45,7 @@ while True :
         if skip :
             cur_function_stream = ''
             skip = False
+            continue
         # empty line, means flush
         try :
             result_map[cur_function_stream][1] += 1
@@ -52,17 +56,20 @@ while True :
         if line[1:3] == "0x" :
             # hex code
             #print "Hex: ", line
-            cur_function_stream += line + '\n'
+            hex_location, function = line.split(None, 1)
+            cur_function_stream += function + '\n'
         else :
             # date
             #print "Date: ", line
             # XXX: not for now
             index = line.find(']')
             date_str = line[1:index]
-            log_time = datetime.strptime(date_str, "%m-%b-%Y %H:%M:%S")
-            if start_date and log_time < start_date :
+            log_time = datetime.strptime(date_str, "%d-%b-%Y %H:%M:%S")
+            if start_date and (log_time < start_date) :
+                #print 'Skipping due to ', start_date, log_time, date_str
                 skip = True
-            if end_date and log_time > end_date :
+            if end_date and (log_time > end_date) :
+                #print 'Skipping due to ', end_date, log_time, date_str
                 skip = True
 
     elif line.startswith('script_filename = ') :
